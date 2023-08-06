@@ -8,6 +8,11 @@ It can deal with comments and whitespace in the struct definition, and will
 preserve them in the output. It handles unknown types by assuming they cannot be 
 packed, treating they as `bytes32`.
 
+## Disclaimer
+
+This code is a work in progress and can contain bugs. Use it at your own risk.
+Feature request and bug reports are welcome.
+
 ### Example
 
 input
@@ -52,3 +57,8 @@ output
 go build && ./struct-packing examples/RequestMeta.txt
 ```
 
+## TODO
+
+- [ ] Add more flexible command line options
+- [ ] Add tests
+- [ ] Improve error handling
