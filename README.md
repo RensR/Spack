@@ -54,7 +54,7 @@ output
 ## Quickstart
 
 ```bash
-go build && ./struct-packing examples/RequestMeta.txt
+go build && ./spack examples/RequestMeta.txt
 ```
 
 ## TODO

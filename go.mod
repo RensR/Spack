@@ -1,3 +1,3 @@
-module struct-packing
+module spack
 
 go 1.20
