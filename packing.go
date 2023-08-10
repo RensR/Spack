@@ -4,10 +4,10 @@ import (
 	"sort"
 )
 
-func packStructCurrentFieldOrder(fields []DataDef) []StorageSlot {
+func (sd *StructDef) packStructCurrentFieldOrder() {
 	var storageSlots []StorageSlot
 
-	for _, field := range fields {
+	for _, field := range sd.Fields {
 		// If we have no packed fields yet, add the first field as a packed field
 		if len(storageSlots) == 0 {
 			storageSlots = []StorageSlot{{Fields: []DataDef{field}, Offset: field.Size}}
@@ -24,7 +24,7 @@ func packStructCurrentFieldOrder(fields []DataDef) []StorageSlot {
 		storageSlots = append(storageSlots, StorageSlot{Fields: []DataDef{field}, Offset: field.Size})
 	}
 
-	return storageSlots
+	sd.StorageSlots = storageSlots
 }
 
 func (sd *StructDef) packStructOptimal() {

@@ -53,9 +53,41 @@ output
 
 ## Quickstart
 
+build
+
 ```bash
-go build && ./spack examples/RequestMeta.txt
+go build
 ```
+
+Loading from a file (recommended):
+
+```bash
+./spack -f pack examples/RequestMeta.txt
+```
+
+Counting storage slots
+    
+```bash
+./spack -f count examples/RequestMeta.txt
+```
+
+Printing the struct without optimizations but with struct packing comments
+
+```bash
+./spack -f -u pack examples/RequestMeta.txt
+```
+
+## Commands and flags
+
+### Commands
+
+- `pack` - packs the struct
+- `count` - counts the number of storage slots the struct uses
+
+### Flags
+- `-f` or `--file` - load the struct from a file
+- `-u` or `--unoptimized` - print the struct without optimizations but with struct packing comments
+
 
 ## TODO
 
