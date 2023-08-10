@@ -2,15 +2,17 @@ package main
 
 import (
 	"sort"
+
+	"spack/solidity"
 )
 
-func (sd *StructDef) packStructCurrentFieldOrder() {
-	var storageSlots []StorageSlot
+func packStructCurrentFieldOrder(fields []solidity.DataDef) []solidity.StorageSlot {
+	var storageSlots []solidity.StorageSlot
 
-	for _, field := range sd.Fields {
+	for _, field := range fields {
 		// If we have no packed fields yet, add the first field as a packed field
 		if len(storageSlots) == 0 {
-			storageSlots = []StorageSlot{{Fields: []DataDef{field}, Offset: field.Size}}
+			storageSlots = []solidity.StorageSlot{{Fields: []solidity.DataDef{field}, Offset: field.Size}}
 			continue
 		}
 
@@ -21,27 +23,27 @@ func (sd *StructDef) packStructCurrentFieldOrder() {
 			continue
 		}
 
-		storageSlots = append(storageSlots, StorageSlot{Fields: []DataDef{field}, Offset: field.Size})
+		storageSlots = append(storageSlots, solidity.StorageSlot{Fields: []solidity.DataDef{field}, Offset: field.Size})
 	}
 
-	sd.StorageSlots = storageSlots
+	return storageSlots
 }
 
-func (sd *StructDef) packStructOptimal() {
-	sort.Slice(sd.Fields, func(i, j int) bool {
-		return sd.Fields[i].Size > sd.Fields[j].Size
+func packStructOptimal(fields []solidity.DataDef) []solidity.StorageSlot {
+	sort.Slice(fields, func(i, j int) bool {
+		return fields[i].Size > fields[j].Size
 	})
 
-	sd.StorageSlots = binPacking(sd.Fields, []StorageSlot{})
+	return binPacking(fields, []solidity.StorageSlot{})
 }
 
-func binPacking(fields []DataDef, existingSlots []StorageSlot) []StorageSlot {
+func binPacking(fields []solidity.DataDef, existingSlots []solidity.StorageSlot) []solidity.StorageSlot {
 	if len(fields) == 0 {
 		return existingSlots
 	}
 
 	currentItem := fields[0]
-	var packingOptions [][]StorageSlot
+	var packingOptions [][]solidity.StorageSlot
 
 	for i, slot := range existingSlots {
 		// The field doesn't fit into the slot, so skip it
@@ -50,7 +52,7 @@ func binPacking(fields []DataDef, existingSlots []StorageSlot) []StorageSlot {
 		}
 
 		// It the field does fit, make a copy of the existing slots and add the field to the slot
-		slotsCopy := make([]StorageSlot, len(existingSlots))
+		slotsCopy := make([]solidity.StorageSlot, len(existingSlots))
 		copy(slotsCopy, existingSlots)
 
 		// Make sure we copy slot.Fields to avoid modifying the original slice
@@ -62,27 +64,27 @@ func binPacking(fields []DataDef, existingSlots []StorageSlot) []StorageSlot {
 	}
 
 	// If we can't fit the field into any existing slots, create a new slot and recursively call binPacking
-	packingOptions = append(packingOptions, binPacking(fields[1:], append(existingSlots, StorageSlot{
-		Fields: []DataDef{currentItem},
+	packingOptions = append(packingOptions, binPacking(fields[1:], append(existingSlots, solidity.StorageSlot{
+		Fields: []solidity.DataDef{currentItem},
 		Offset: currentItem.Size,
 	})))
 
 	return findOptimalPacking(packingOptions)
 }
 
-func findOptimalPacking(options [][]StorageSlot) []StorageSlot {
+func findOptimalPacking(options [][]solidity.StorageSlot) []solidity.StorageSlot {
 	if len(options) == 0 {
-		return []StorageSlot{}
+		return []solidity.StorageSlot{}
 	}
 
 	// First find the options with the least amount of slots
 	// This gives the first option twice if it happens to be the best
 	// This doesn't matter much since we only return a single option anyway
-	leastAmountOfSlots := [][]StorageSlot{options[0]}
+	leastAmountOfSlots := [][]solidity.StorageSlot{options[0]}
 
 	for _, option := range options {
 		if len(option) < len(leastAmountOfSlots[0]) {
-			leastAmountOfSlots = [][]StorageSlot{option}
+			leastAmountOfSlots = [][]solidity.StorageSlot{option}
 		} else if len(option) == len(leastAmountOfSlots[0]) {
 			leastAmountOfSlots = append(leastAmountOfSlots, option)
 		}

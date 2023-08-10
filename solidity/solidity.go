@@ -1,4 +1,4 @@
-package main
+package solidity
 
 import (
 	"fmt"
@@ -48,4 +48,45 @@ func (dt *DataType) Size() uint8 {
 
 	fmt.Printf("Unknown data type %s. Assuming 32 bytes. If this is not correct add them with the correct size\n", *dt)
 	return 32
+}
+
+type DataDef struct {
+	Name    string
+	Comment string
+	Type    DataType
+	Size    uint8
+}
+
+func (dd *DataDef) FieldNameLength() int {
+	return len(dd.Name) + len(dd.Type) + 1
+}
+
+func (dd *DataDef) ToString() string {
+	return fmt.Sprintf("%s %s", dd.Type, dd.Name)
+}
+
+type StorageSlot struct {
+	Offset uint8
+	Fields []DataDef
+}
+
+type Struct struct {
+	Name         string
+	Fields       []DataDef
+	StorageSlots []StorageSlot
+}
+
+func (sd *Struct) PrintStats() string {
+	return fmt.Sprintf("Struct %s has %d fields packed into %d slots\n\n", sd.Name, len(sd.Fields), len(sd.StorageSlots))
+}
+
+func (sd *Struct) MaxFieldNameLength() int {
+	size := 0
+	for _, field := range sd.Fields {
+		fieldLength := field.FieldNameLength()
+		if fieldLength > size {
+			size = fieldLength
+		}
+	}
+	return size
 }

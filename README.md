@@ -39,15 +39,15 @@ output
     struct RequestMeta {
         Custom.Datatype data; //                     
         bytes32 flags; //                  32 bytes of flags
-        address requestingContract; // ──┐
-        uint96 availableBalance; // ─────┘ in wei. 0 if not specified.
-        address subscriptionOwner; // ───┐
+        address requestingContract; // ──╮
+        uint96 availableBalance; // ─────╯ in wei. 0 if not specified.
+        address subscriptionOwner; // ───╮
         uint64 completedRequests; //     │
-        uint32 callbackGasLimit; // ─────┘
-        uint72 adminFee; // ─────────────┐ in wei
+        uint32 callbackGasLimit; // ─────╯
+        uint72 adminFee; // ─────────────╮ in wei
         uint64 subscriptionId; //        │
         uint64 initiatedRequests; //     │ number of requests initiated by this contract
-        uint16 dataVersion; // ──────────┘
+        uint16 dataVersion; // ──────────╯
     }
 ```
 
@@ -87,6 +87,7 @@ Printing the struct without optimizations but with struct packing comments
 ### Flags
 - `-f` or `--file` - load the struct from a file
 - `-u` or `--unoptimized` - print the struct without optimizations but with struct packing comments
+- `-c` or `--config` - load the config from a file
 
 
 ## TODO
