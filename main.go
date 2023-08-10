@@ -8,6 +8,10 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
+
+	"spack/parser"
+	"spack/printer"
+	"spack/solidity"
 )
 
 func main() {
@@ -72,18 +76,18 @@ func newSpackApp() *cli.App {
 }
 
 func pack(input string, readFromFile bool, unpacked bool) (string, error) {
-	structDef, err := getStruct(input, readFromFile)
+	solidityStruct, err := getStruct(input, readFromFile)
 	if err != nil {
 		return "", errors.Wrap(err, "Error parsing struct")
 	}
 	if unpacked {
-		structDef.packStructCurrentFieldOrder()
-		return structDef.ToString(), nil
+		solidityStruct.StorageSlots = packStructCurrentFieldOrder(solidityStruct.Fields)
+		return printer.PrintSolidityStruct(solidityStruct), nil
 	}
 
-	structDef.packStructOptimal()
+	solidityStruct.StorageSlots = packStructOptimal(solidityStruct.Fields)
 
-	return structDef.ToString(), nil
+	return printer.PrintSolidityStruct(solidityStruct), nil
 }
 
 func count(input string, readFromFile bool, unpacked bool) (int, error) {
@@ -92,17 +96,17 @@ func count(input string, readFromFile bool, unpacked bool) (int, error) {
 		return 0, errors.Wrap(err, "Error parsing struct")
 	}
 	if unpacked {
-		structDef.packStructCurrentFieldOrder()
+		structDef.StorageSlots = packStructCurrentFieldOrder(structDef.Fields)
 		return len(structDef.StorageSlots), nil
 	}
 
-	structDef.packStructOptimal()
+	structDef.StorageSlots = packStructOptimal(structDef.Fields)
 	return len(structDef.StorageSlots), nil
 }
 
-func getStruct(input string, readFromFile bool) (StructDef, error) {
+func getStruct(input string, readFromFile bool) (solidity.Struct, error) {
 	if input == "" {
-		return StructDef{}, errors.New("No input specified")
+		return solidity.Struct{}, errors.New("No input specified")
 	}
 
 	structString := input
@@ -114,9 +118,9 @@ func getStruct(input string, readFromFile bool) (StructDef, error) {
 		structString = string(fileByes)
 	}
 
-	structDef, err := ParseStruct(structString)
+	structDef, err := parser.ParseStruct(structString)
 	if err != nil {
-		return StructDef{}, errors.Wrap(err, "Error parsing struct")
+		return solidity.Struct{}, errors.Wrap(err, "Error parsing struct")
 	}
 	return structDef, nil
 }

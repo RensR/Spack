@@ -1,0 +1,12 @@
+{
+  "PrintingConfig": {
+    "EnableStructPackingComments": true,
+    "StripComments": false,
+    "PrintingCharacterConfig": {
+      "HorizontalLineChar": "-",
+      "VerticalLineChar": "│",
+      "TopCapChar": "┐",
+      "BottomCapChar": "┘"
+    }
+  }
+}

@@ -1,11 +1,13 @@
-package main
+package printer
 
 import (
 	"fmt"
 	"strings"
+
+	"spack/solidity"
 )
 
-func printStorageSlots(storageSlots []StorageSlot, maxFieldNameSize int) string {
+func PrintStorageSlots(storageSlots []solidity.StorageSlot, maxFieldNameSize int) string {
 	var output string
 
 	for _, slot := range storageSlots {
@@ -33,4 +35,8 @@ func printStorageSlots(storageSlots []StorageSlot, maxFieldNameSize int) string 
 	}
 
 	return output
+}
+
+func PrintSolidityStruct(structDef solidity.Struct) string {
+	return fmt.Sprintf("struct %s {\n%s}\n", structDef.Name, PrintStorageSlots(structDef.StorageSlots, structDef.MaxFieldNameLength()))
 }
