@@ -4,26 +4,36 @@ import (
 	"fmt"
 	"strings"
 
+	"spack/config"
 	"spack/solidity"
 )
 
-func PrintStorageSlots(storageSlots []solidity.StorageSlot, maxFieldNameSize int) string {
+type Printer struct {
+	config.PrintingConfig
+}
+
+func NewPrinter(printingConfig config.PrintingConfig) (Printer, error) {
+	return Printer{PrintingConfig: printingConfig}, nil
+}
+
+func (p *Printer) printStorageSlots(storageSlots []solidity.StorageSlot, maxFieldNameSize int) string {
 	var output string
 
 	for _, slot := range storageSlots {
 		for i, field := range slot.Fields {
-			capChar := " "
-			fillerChar := " "
+			capChar := p.PrintingCharacterConfig.UnpackedSlotCapChar
+			fillerChar := p.PrintingCharacterConfig.UnpackedLineChar
 
 			if len(slot.Fields) > 1 {
 				if i == 0 {
-					capChar = "┐"
-					fillerChar = "─"
+					capChar = p.PrintingCharacterConfig.TopCapChar
+					fillerChar = p.PrintingCharacterConfig.HorizontalLineChar
 				} else if i == len(slot.Fields)-1 {
-					capChar = "┘"
-					fillerChar = "─"
+					capChar = p.PrintingCharacterConfig.BottomCapChar
+					fillerChar = p.PrintingCharacterConfig.HorizontalLineChar
 				} else {
-					capChar = "│"
+					capChar = p.PrintingCharacterConfig.VerticalLineChar
+					fillerChar = p.PrintingCharacterConfig.EmptySpaceChar
 				}
 			}
 
@@ -37,6 +47,6 @@ func PrintStorageSlots(storageSlots []solidity.StorageSlot, maxFieldNameSize int
 	return output
 }
 
-func PrintSolidityStruct(structDef solidity.Struct) string {
-	return fmt.Sprintf("struct %s {\n%s}\n", structDef.Name, PrintStorageSlots(structDef.StorageSlots, structDef.MaxFieldNameLength()))
+func (p *Printer) PrintSolidityStruct(structDef solidity.Struct) string {
+	return fmt.Sprintf("struct %s {\n%s}\n", structDef.Name, p.printStorageSlots(structDef.StorageSlots, structDef.MaxFieldNameLength()))
 }

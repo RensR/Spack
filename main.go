@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
+	"spack/config"
 	"spack/parser"
 	"spack/printer"
 	"spack/solidity"
@@ -20,7 +21,19 @@ func main() {
 	}
 }
 
+type SpackApp struct {
+	readFromFile bool
+	unpacked     bool
+	printer      *printer.Printer
+	args         cli.Args
+}
+
 func newSpackApp() *cli.App {
+	newPrinter, err := printer.NewPrinter(config.GetDefaultPrintingConfig())
+	if err != nil {
+		panic(err)
+	}
+
 	var readFromFile, unpacked bool
 	app := &cli.App{
 		Name:  "Spack",
@@ -45,7 +58,14 @@ func newSpackApp() *cli.App {
 				Aliases: []string{"p"},
 				Usage:   "packs a Solidity struct",
 				Action: func(c *cli.Context) error {
-					result, err := pack(c.Args().Get(0), readFromFile, unpacked)
+					AppConfig := &SpackApp{
+						printer:      &newPrinter,
+						args:         c.Args(),
+						readFromFile: readFromFile,
+						unpacked:     unpacked,
+					}
+
+					result, err := pack(AppConfig)
 					if err != nil {
 						return err
 					}
@@ -58,7 +78,14 @@ func newSpackApp() *cli.App {
 				Aliases: []string{"c"},
 				Usage:   "count the slots of the given struct",
 				Action: func(c *cli.Context) error {
-					result, err := count(c.Args().Get(0), readFromFile, unpacked)
+					AppConfig := &SpackApp{
+						printer:      &newPrinter,
+						args:         c.Args(),
+						readFromFile: readFromFile,
+						unpacked:     unpacked,
+					}
+
+					result, err := count(AppConfig)
 					if err != nil {
 						return err
 					}
@@ -75,27 +102,27 @@ func newSpackApp() *cli.App {
 	return app
 }
 
-func pack(input string, readFromFile bool, unpacked bool) (string, error) {
-	solidityStruct, err := getStruct(input, readFromFile)
+func pack(settings *SpackApp) (string, error) {
+	solidityStruct, err := getStruct(settings)
 	if err != nil {
 		return "", errors.Wrap(err, "Error parsing struct")
 	}
-	if unpacked {
+	if settings.unpacked {
 		solidityStruct.StorageSlots = packStructCurrentFieldOrder(solidityStruct.Fields)
-		return printer.PrintSolidityStruct(solidityStruct), nil
+		return settings.printer.PrintSolidityStruct(solidityStruct), nil
 	}
 
 	solidityStruct.StorageSlots = packStructOptimal(solidityStruct.Fields)
 
-	return printer.PrintSolidityStruct(solidityStruct), nil
+	return settings.printer.PrintSolidityStruct(solidityStruct), nil
 }
 
-func count(input string, readFromFile bool, unpacked bool) (int, error) {
-	structDef, err := getStruct(input, readFromFile)
+func count(settings *SpackApp) (int, error) {
+	structDef, err := getStruct(settings)
 	if err != nil {
 		return 0, errors.Wrap(err, "Error parsing struct")
 	}
-	if unpacked {
+	if settings.unpacked {
 		structDef.StorageSlots = packStructCurrentFieldOrder(structDef.Fields)
 		return len(structDef.StorageSlots), nil
 	}
@@ -104,13 +131,14 @@ func count(input string, readFromFile bool, unpacked bool) (int, error) {
 	return len(structDef.StorageSlots), nil
 }
 
-func getStruct(input string, readFromFile bool) (solidity.Struct, error) {
+func getStruct(settings *SpackApp) (solidity.Struct, error) {
+	input := settings.args.Get(0)
 	if input == "" {
 		return solidity.Struct{}, errors.New("No input specified")
 	}
 
 	structString := input
-	if readFromFile {
+	if settings.readFromFile {
 		fileByes, err := os.ReadFile(input)
 		if err != nil {
 			panic(err)
