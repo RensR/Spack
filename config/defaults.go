@@ -23,5 +23,6 @@ func GetDefaultPrintingCharConfig() CharacterConfig {
 		UnpackedSlotCapChar: " ",
 		UnpackedLineChar:    " ",
 		EmptySpaceChar:      " ",
+		MinLinePadding:      1,
 	}
 }

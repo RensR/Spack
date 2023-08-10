@@ -58,7 +58,7 @@ func (p *Printer) PrintSingleLine(fields []solidity.DataDef, position int, maxFi
 		fieldComment = field.Comment
 	}
 
-	fillerCount := maxFieldNameSize - field.FieldNameLength() + 2
+	fillerCount := maxFieldNameSize - field.FieldNameLength() + p.CharacterConfig.MinLinePadding
 	structPackingComment := fmt.Sprintf("%s%s%s\n", strings.Repeat(fillerChar, fillerCount), capChar, fieldComment)
 	spacingAndFieldDef := fmt.Sprintf("   %s; // ", field.ToString())
 	return spacingAndFieldDef + structPackingComment

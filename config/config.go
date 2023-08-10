@@ -23,8 +23,10 @@ type CharacterConfig struct {
 	TopCapChar          string
 	BottomCapChar       string
 	UnpackedSlotCapChar string
-	UnpackedLineChar    string
-	EmptySpaceChar      string
+
+	UnpackedLineChar string
+	EmptySpaceChar   string
+	MinLinePadding   int
 }
 
 func LoadConfigFromFile(configFile string) (GlobalConfig, error) {
