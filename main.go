@@ -21,19 +21,8 @@ func main() {
 	}
 }
 
-type SpackApp struct {
-	readFromFile bool
-	unpacked     bool
-	printer      *printer.Printer
-	args         cli.Args
-}
-
 func newSpackApp() *cli.App {
-	newPrinter, err := printer.NewPrinter(config.GetDefaultPrintingConfig())
-	if err != nil {
-		panic(err)
-	}
-
+	var configFile string
 	var readFromFile, unpacked bool
 	app := &cli.App{
 		Name:  "Spack",
@@ -51,6 +40,12 @@ func newSpackApp() *cli.App {
 				Usage:       "does not pack the struct",
 				Destination: &unpacked,
 			},
+			&cli.StringFlag{
+				Name:        "config",
+				Aliases:     []string{"c"},
+				Usage:       "location of the config file",
+				Destination: &configFile,
+			},
 		},
 		Commands: []*cli.Command{
 			{
@@ -58,14 +53,11 @@ func newSpackApp() *cli.App {
 				Aliases: []string{"p"},
 				Usage:   "packs a Solidity struct",
 				Action: func(c *cli.Context) error {
-					AppConfig := &SpackApp{
-						printer:      &newPrinter,
-						args:         c.Args(),
-						readFromFile: readFromFile,
-						unpacked:     unpacked,
+					appConfig, err := NewAppSettings(configFile, readFromFile, unpacked, c.Args())
+					if err != nil {
+						return err
 					}
-
-					result, err := pack(AppConfig)
+					result, err := pack(&appConfig)
 					if err != nil {
 						return err
 					}
@@ -78,14 +70,11 @@ func newSpackApp() *cli.App {
 				Aliases: []string{"c"},
 				Usage:   "count the slots of the given struct",
 				Action: func(c *cli.Context) error {
-					AppConfig := &SpackApp{
-						printer:      &newPrinter,
-						args:         c.Args(),
-						readFromFile: readFromFile,
-						unpacked:     unpacked,
+					appConfig, err := NewAppSettings(configFile, readFromFile, unpacked, c.Args())
+					if err != nil {
+						return err
 					}
-
-					result, err := count(AppConfig)
+					result, err := count(&appConfig)
 					if err != nil {
 						return err
 					}
@@ -102,7 +91,38 @@ func newSpackApp() *cli.App {
 	return app
 }
 
-func pack(settings *SpackApp) (string, error) {
+type AppSettings struct {
+	readFromFile bool
+	unpacked     bool
+	printer      *printer.Printer
+	args         cli.Args
+}
+
+func NewAppSettings(configFile string, readFromFile, unpacked bool, args cli.Args) (AppSettings, error) {
+	configuration := config.GetDefaultConfig()
+	// If the user specified a config file, load it
+	if configFile != "" {
+		globalConfig, err := config.LoadConfigFromFile(configFile)
+		if err != nil {
+			return AppSettings{}, err
+		}
+		configuration = globalConfig
+	}
+
+	newPrinter, err := printer.NewPrinter(configuration.PrintingConfig)
+	if err != nil {
+		return AppSettings{}, err
+	}
+
+	return AppSettings{
+		printer:      &newPrinter,
+		args:         args,
+		readFromFile: readFromFile,
+		unpacked:     unpacked,
+	}, nil
+}
+
+func pack(settings *AppSettings) (string, error) {
 	solidityStruct, err := getStruct(settings)
 	if err != nil {
 		return "", errors.Wrap(err, "Error parsing struct")
@@ -117,7 +137,7 @@ func pack(settings *SpackApp) (string, error) {
 	return settings.printer.PrintSolidityStruct(solidityStruct), nil
 }
 
-func count(settings *SpackApp) (int, error) {
+func count(settings *AppSettings) (int, error) {
 	structDef, err := getStruct(settings)
 	if err != nil {
 		return 0, errors.Wrap(err, "Error parsing struct")
@@ -131,7 +151,7 @@ func count(settings *SpackApp) (int, error) {
 	return len(structDef.StorageSlots), nil
 }
 
-func getStruct(settings *SpackApp) (solidity.Struct, error) {
+func getStruct(settings *AppSettings) (solidity.Struct, error) {
 	input := settings.args.Get(0)
 	if input == "" {
 		return solidity.Struct{}, errors.New("No input specified")

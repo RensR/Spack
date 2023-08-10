@@ -9,13 +9,13 @@ func GetDefaultConfig() GlobalConfig {
 func GetDefaultPrintingConfig() PrintingConfig {
 	return PrintingConfig{
 		EnableStructPackingComments: true,
-		StripComments:               false,
-		PrintingCharacterConfig:     GetDefaultPrintingCharConfig(),
+		StripComments:               true,
+		CharacterConfig:             GetDefaultPrintingCharConfig(),
 	}
 }
 
-func GetDefaultPrintingCharConfig() PrintingCharacterConfig {
-	return PrintingCharacterConfig{
+func GetDefaultPrintingCharConfig() CharacterConfig {
+	return CharacterConfig{
 		HorizontalLineChar:  "─",
 		VerticalLineChar:    "│",
 		TopCapChar:          "╮",

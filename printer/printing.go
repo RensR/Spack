@@ -20,31 +20,48 @@ func (p *Printer) printStorageSlots(storageSlots []solidity.StorageSlot, maxFiel
 	var output string
 
 	for _, slot := range storageSlots {
-		for i, field := range slot.Fields {
-			capChar := p.PrintingCharacterConfig.UnpackedSlotCapChar
-			fillerChar := p.PrintingCharacterConfig.UnpackedLineChar
-
-			if len(slot.Fields) > 1 {
-				if i == 0 {
-					capChar = p.PrintingCharacterConfig.TopCapChar
-					fillerChar = p.PrintingCharacterConfig.HorizontalLineChar
-				} else if i == len(slot.Fields)-1 {
-					capChar = p.PrintingCharacterConfig.BottomCapChar
-					fillerChar = p.PrintingCharacterConfig.HorizontalLineChar
-				} else {
-					capChar = p.PrintingCharacterConfig.VerticalLineChar
-					fillerChar = p.PrintingCharacterConfig.EmptySpaceChar
-				}
-			}
-
-			spacingAndFieldDef := fmt.Sprintf("   %s; // ", field.ToString())
-			fillerCount := maxFieldNameSize - field.FieldNameLength() + 2
-			structPackingComment := fmt.Sprintf("%s%s%s\n", strings.Repeat(fillerChar, fillerCount), capChar, field.Comment)
-			output += spacingAndFieldDef + structPackingComment
+		for i, _ := range slot.Fields {
+			output += p.PrintSingleLine(slot.Fields, i, maxFieldNameSize)
 		}
 	}
 
 	return output
+}
+
+func (p *Printer) PrintSingleLine(fields []solidity.DataDef, position int, maxFieldNameSize int) string {
+	field := fields[position]
+
+	if !p.PrintingConfig.EnableStructPackingComments {
+		if p.PrintingConfig.StripComments {
+			return fmt.Sprintf("   %s;\n", field.ToString())
+		}
+		return fmt.Sprintf("   %s; // %s\n", field.ToString(), field.Comment)
+	}
+
+	capChar := p.CharacterConfig.UnpackedSlotCapChar
+	fillerChar := p.CharacterConfig.UnpackedLineChar
+
+	if len(fields) > 1 {
+		if position == 0 {
+			capChar = p.CharacterConfig.TopCapChar
+			fillerChar = p.CharacterConfig.HorizontalLineChar
+		} else if position == len(fields)-1 {
+			capChar = p.CharacterConfig.BottomCapChar
+			fillerChar = p.CharacterConfig.HorizontalLineChar
+		} else {
+			capChar = p.CharacterConfig.VerticalLineChar
+			fillerChar = p.CharacterConfig.EmptySpaceChar
+		}
+	}
+	fieldComment := ""
+	if !p.PrintingConfig.StripComments {
+		fieldComment = field.Comment
+	}
+
+	fillerCount := maxFieldNameSize - field.FieldNameLength() + 2
+	structPackingComment := fmt.Sprintf("%s%s%s\n", strings.Repeat(fillerChar, fillerCount), capChar, fieldComment)
+	spacingAndFieldDef := fmt.Sprintf("   %s; // ", field.ToString())
+	return spacingAndFieldDef + structPackingComment
 }
 
 func (p *Printer) PrintSolidityStruct(structDef solidity.Struct) string {

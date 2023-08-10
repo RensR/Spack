@@ -3,10 +3,12 @@
     "EnableStructPackingComments": true,
     "StripComments": false,
     "PrintingCharacterConfig": {
-      "HorizontalLineChar": "-",
+      "HorizontalLineChar": "─",
       "VerticalLineChar": "│",
       "TopCapChar": "┐",
-      "BottomCapChar": "┘"
+      "BottomCapChar": "┘",
+      "UnpackedLineChar": " ",
+      "EmptySpaceChar":   " "
     }
   }
 }
