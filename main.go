@@ -2,79 +2,121 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"sort"
+
+	"github.com/pkg/errors"
+	"github.com/urfave/cli/v2"
 )
 
 func main() {
-	filePath := os.Args[1]
-	dat, err := os.ReadFile(filePath)
-	if err != nil {
-		panic(err)
+	if err := newSpackApp().Run(os.Args); err != nil {
+		log.Fatal(err)
 	}
-	parseAndPrint(string(dat))
 }
 
-func parseAndPrint(input string) {
-	dataDef, err := ParseStruct(input)
-	if err != nil {
-		fmt.Printf("Error parsing struct: %s\n", err)
-		return
+func newSpackApp() *cli.App {
+	var readFromFile, unpacked bool
+	app := &cli.App{
+		Name:  "Spack",
+		Usage: "pack Solidity structs",
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:        "file",
+				Aliases:     []string{"f"},
+				Usage:       "loads a Solidity struct from a file",
+				Destination: &readFromFile,
+			},
+			&cli.BoolFlag{
+				Name:        "unpacked",
+				Aliases:     []string{"u"},
+				Usage:       "does not pack the struct",
+				Destination: &unpacked,
+			},
+		},
+		Commands: []*cli.Command{
+			{
+				Name:    "pack",
+				Aliases: []string{"p"},
+				Usage:   "packs a Solidity struct",
+				Action: func(c *cli.Context) error {
+					result, err := pack(c.Args().Get(0), readFromFile, unpacked)
+					if err != nil {
+						return err
+					}
+					fmt.Println(result)
+					return nil
+				},
+			},
+			{
+				Name:    "count",
+				Aliases: []string{"c"},
+				Usage:   "count the slots of the given struct",
+				Action: func(c *cli.Context) error {
+					result, err := count(c.Args().Get(0), readFromFile, unpacked)
+					if err != nil {
+						return err
+					}
+					fmt.Println(result)
+					return nil
+				},
+			},
+		},
 	}
 
-	dataDef.StorageSlots = packStructCurrentFieldOrder(dataDef.Fields)
+	sort.Sort(cli.FlagsByName(app.Flags))
+	sort.Sort(cli.CommandsByName(app.Commands))
 
-	fmt.Print("\nStruct prior to packing:\n")
-	fmt.Print(dataDef.PrintStats())
-	fmt.Print(dataDef.ToString())
-
-	dataDef.packStructOptimal()
-
-	fmt.Print("\nStruct after packing:\n")
-	fmt.Print(dataDef.PrintStats())
-	fmt.Print(dataDef.ToString())
+	return app
 }
 
-type StructDef struct {
-	Name         string
-	Fields       []DataDef
-	StorageSlots []StorageSlot
+func pack(input string, readFromFile bool, unpacked bool) (string, error) {
+	structDef, err := getStruct(input, readFromFile)
+	if err != nil {
+		return "", errors.Wrap(err, "Error parsing struct")
+	}
+	if unpacked {
+		structDef.packStructCurrentFieldOrder()
+		return structDef.ToString(), nil
+	}
+
+	structDef.packStructOptimal()
+
+	return structDef.ToString(), nil
 }
 
-type StorageSlot struct {
-	Offset uint8
-	Fields []DataDef
+func count(input string, readFromFile bool, unpacked bool) (int, error) {
+	structDef, err := getStruct(input, readFromFile)
+	if err != nil {
+		return 0, errors.Wrap(err, "Error parsing struct")
+	}
+	if unpacked {
+		structDef.packStructCurrentFieldOrder()
+		return len(structDef.StorageSlots), nil
+	}
+
+	structDef.packStructOptimal()
+	return len(structDef.StorageSlots), nil
 }
 
-func (sd *StructDef) PrintStats() string {
-	return fmt.Sprintf("Struct %s has %d fields packed into %d slots\n\n", sd.Name, len(sd.Fields), len(sd.StorageSlots))
-}
+func getStruct(input string, readFromFile bool) (StructDef, error) {
+	if input == "" {
+		return StructDef{}, errors.New("No input specified")
+	}
 
-func (sd *StructDef) ToString() string {
-	return fmt.Sprintf("struct %s {\n%s}\n", sd.Name, printStorageSlots(sd.StorageSlots, sd.MaxFieldNameLength()))
-}
-
-func (sd *StructDef) MaxFieldNameLength() int {
-	size := 0
-	for _, field := range sd.Fields {
-		fieldLength := field.FieldNameLength()
-		if fieldLength > size {
-			size = fieldLength
+	structString := input
+	if readFromFile {
+		fileByes, err := os.ReadFile(input)
+		if err != nil {
+			panic(err)
 		}
+		structString = string(fileByes)
 	}
-	return size
-}
 
-type DataDef struct {
-	Name    string
-	Comment string
-	Type    DataType
-	Size    uint8
-}
-
-func (dd *DataDef) FieldNameLength() int {
-	return len(dd.Name) + len(dd.Type) + 1
-}
-
-func (dd *DataDef) ToString() string {
-	return fmt.Sprintf("%s %s", dd.Type, dd.Name)
+	structDef, err := ParseStruct(structString)
+	if err != nil {
+		return StructDef{}, errors.Wrap(err, "Error parsing struct")
+	}
+	return structDef, nil
 }
