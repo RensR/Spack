@@ -9,7 +9,7 @@ func GetDefaultConfig() GlobalConfig {
 func GetDefaultPrintingConfig() PrintingConfig {
 	return PrintingConfig{
 		EnableStructPackingComments: true,
-		StripComments:               true,
+		StripComments:               false,
 		CharacterConfig:             GetDefaultPrintingCharConfig(),
 	}
 }
