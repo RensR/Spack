@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"spack/config"
-	"spack/solidity"
+	"github.com/rensr/spack/config"
+	"github.com/rensr/spack/solidity"
 )
 
 type Printer struct {

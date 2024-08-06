@@ -62,6 +62,7 @@ go build
 Loading from a file (recommended):
 
 ```bash
+./spack -f count examples/RequestMeta.txt
 ./spack -f pack examples/RequestMeta.txt
 ```
 
@@ -74,6 +75,7 @@ Counting storage slots
 Printing the struct without optimizations but with struct packing comments
 
 ```bash
+./spack -f -u count examples/RequestMeta.txt
 ./spack -f -u pack examples/RequestMeta.txt
 ```
 

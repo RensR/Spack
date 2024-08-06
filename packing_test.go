@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"spack/solidity"
+	"github.com/rensr/spack/solidity"
 )
 
 // The findOptimalPacking function doesn't use the fields in the

@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"spack/solidity"
+	"github.com/rensr/spack/solidity"
 )
 
 func ParseStruct(structDefString string) (solidity.Struct, error) {

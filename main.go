@@ -9,10 +9,10 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"spack/config"
-	"spack/parser"
-	"spack/printer"
-	"spack/solidity"
+	"github.com/rensr/spack/config"
+	"github.com/rensr/spack/parser"
+	"github.com/rensr/spack/printer"
+	"github.com/rensr/spack/solidity"
 )
 
 func main() {

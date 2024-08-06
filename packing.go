@@ -3,7 +3,7 @@ package main
 import (
 	"sort"
 
-	"spack/solidity"
+	"github.com/rensr/spack/solidity"
 )
 
 func packStructCurrentFieldOrder(fields []solidity.DataDef) []solidity.StorageSlot {
