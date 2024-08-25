@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"sort"
 
 	"github.com/pkg/errors"
@@ -22,17 +24,23 @@ func main() {
 }
 
 func newSpackApp() *cli.App {
-	var configFile string
-	var readFromFile, unpacked bool
+	var contract, solidityStruct, configFile string
+	var unpacked bool
 	app := &cli.App{
 		Name:  "Spack",
 		Usage: "pack Solidity structs",
 		Flags: []cli.Flag{
-			&cli.BoolFlag{
-				Name:        "file",
-				Aliases:     []string{"f"},
-				Usage:       "loads a Solidity struct from a file",
-				Destination: &readFromFile,
+			&cli.StringFlag{
+				Name:        "contract",
+				Aliases:     []string{"c"},
+				Usage:       "loads all Solidity structs from a contract",
+				Destination: &contract,
+			},
+			&cli.StringFlag{
+				Name: "struct",
+				Aliases: []string{"s"},
+				Usage: "loads a single Solidity struct from a contract",
+				Destination: &solidityStruct,
 			},
 			&cli.BoolFlag{
 				Name:        "unpacked",
@@ -42,7 +50,7 @@ func newSpackApp() *cli.App {
 			},
 			&cli.StringFlag{
 				Name:        "config",
-				Aliases:     []string{"c"},
+				Aliases:     []string{"cfg"},
 				Usage:       "location of the config file",
 				Destination: &configFile,
 			},
@@ -53,7 +61,7 @@ func newSpackApp() *cli.App {
 				Aliases: []string{"p"},
 				Usage:   "packs a Solidity struct",
 				Action: func(c *cli.Context) error {
-					appConfig, err := NewAppSettings(configFile, readFromFile, unpacked, c.Args())
+					appConfig, err := NewAppSettings(configFile, contract, solidityStruct, unpacked, c.Args())
 					if err != nil {
 						return err
 					}
@@ -61,7 +69,11 @@ func newSpackApp() *cli.App {
 					if err != nil {
 						return err
 					}
-					fmt.Println(result)
+
+					for _, r := range result {
+						fmt.Println(r)
+					}
+
 					return nil
 				},
 			},
@@ -70,7 +82,7 @@ func newSpackApp() *cli.App {
 				Aliases: []string{"c"},
 				Usage:   "count the slots of the given struct",
 				Action: func(c *cli.Context) error {
-					appConfig, err := NewAppSettings(configFile, readFromFile, unpacked, c.Args())
+					appConfig, err := NewAppSettings(configFile, contract, solidityStruct, unpacked, c.Args())
 					if err != nil {
 						return err
 					}
@@ -92,13 +104,15 @@ func newSpackApp() *cli.App {
 }
 
 type AppSettings struct {
-	readFromFile bool
+	outDir	   string
+	contract     string
+	solidityStruct string
 	unpacked     bool
 	printer      *printer.Printer
 	args         cli.Args
 }
 
-func NewAppSettings(configFile string, readFromFile, unpacked bool, args cli.Args) (AppSettings, error) {
+func NewAppSettings(configFile string, contract string, solidityStruct string, unpacked bool, args cli.Args) (AppSettings, error) {
 	configuration := config.GetDefaultConfig()
 	// If the user specified a config file, load it
 	if configFile != "" {
@@ -115,60 +129,101 @@ func NewAppSettings(configFile string, readFromFile, unpacked bool, args cli.Arg
 	}
 
 	return AppSettings{
+		outDir: configuration.OutDir,
 		printer:      &newPrinter,
 		args:         args,
-		readFromFile: readFromFile,
+		contract: contract,
+		solidityStruct: solidityStruct,
 		unpacked:     unpacked,
 	}, nil
 }
 
-func pack(settings *AppSettings) (string, error) {
-	solidityStruct, err := getStruct(settings)
+func pack(settings *AppSettings) ([]string, error) {
+	solidityStructs, err := getStructs(settings)
 	if err != nil {
-		return "", errors.Wrap(err, "Error parsing struct")
-	}
-	if settings.unpacked {
-		solidityStruct.StorageSlots = packStructCurrentFieldOrder(solidityStruct.Fields)
-		return settings.printer.PrintSolidityStruct(solidityStruct), nil
+		return []string{}, errors.Wrap(err, "Error parsing struct")
 	}
 
-	solidityStruct.StorageSlots = packStructOptimal(solidityStruct.Fields)
+	var results []string
 
-	return settings.printer.PrintSolidityStruct(solidityStruct), nil
-}
-
-func count(settings *AppSettings) (int, error) {
-	structDef, err := getStruct(settings)
-	if err != nil {
-		return 0, errors.Wrap(err, "Error parsing struct")
-	}
-	if settings.unpacked {
-		structDef.StorageSlots = packStructCurrentFieldOrder(structDef.Fields)
-		return len(structDef.StorageSlots), nil
-	}
-
-	structDef.StorageSlots = packStructOptimal(structDef.Fields)
-	return len(structDef.StorageSlots), nil
-}
-
-func getStruct(settings *AppSettings) (solidity.Struct, error) {
-	input := settings.args.Get(0)
-	if input == "" {
-		return solidity.Struct{}, errors.New("No input specified")
-	}
-
-	structString := input
-	if settings.readFromFile {
-		fileByes, err := os.ReadFile(input)
-		if err != nil {
-			panic(err)
+	for _, solidityStruct := range solidityStructs {
+		if settings.unpacked {
+			solidityStruct.StorageSlots = packStructCurrentFieldOrder(solidityStruct.Fields)
+			results = append(results, settings.printer.PrintSolidityStruct(solidityStruct))
 		}
-		structString = string(fileByes)
+
+		solidityStruct.StorageSlots = packStructOptimal(solidityStruct.Fields)
+
+		results = append(results, settings.printer.PrintSolidityStruct(solidityStruct))
 	}
 
-	structDef, err := parser.ParseStruct(structString)
+	return results, nil
+}
+
+func count(settings *AppSettings) ([]int, error) {
+	structDef, err := getStructs(settings)
 	if err != nil {
-		return solidity.Struct{}, errors.Wrap(err, "Error parsing struct")
+		return []int{}, errors.Wrap(err, "Error parsing struct")
 	}
-	return structDef, nil
+
+	var slots []int
+
+	for _, structDef := range structDef {
+		if settings.unpacked {
+			structDef.StorageSlots = packStructCurrentFieldOrder(structDef.Fields)
+			slots = append(slots, len(structDef.StorageSlots))
+		}
+
+		structDef.StorageSlots = packStructOptimal(structDef.Fields)
+		slots = append(slots, len(structDef.StorageSlots))
+	}
+
+	return slots, nil
+}
+
+func getStructs(settings *AppSettings) ([]solidity.Struct, error) {
+	cmd := exec.Command("forge",  "build",  "--ast")
+
+    _, err := cmd.Output()
+
+	if err != nil {
+		return []solidity.Struct{}, errors.Wrap(err, "Failed to run forge compile")
+	}
+	
+	if settings.contract == "" {
+		return []solidity.Struct{}, errors.New("No input specified")
+	}
+
+	rawData, err := os.ReadFile((settings.outDir + settings.contract + ".sol/" + settings.contract + ".json"))
+
+	if err != nil {
+		return []solidity.Struct{}, errors.Wrap(err, "Failed to read file")
+	}
+
+	// Create a map to extract the AST data
+	var data map[string]interface{}
+	if err := json.Unmarshal(rawData, &data); err != nil {
+		return []solidity.Struct{}, errors.New("Failed to parse AST")
+	}
+
+	// Extract the AST data
+	astData, err := json.Marshal(data["ast"])
+	if err != nil {
+		return []solidity.Struct{}, errors.New("Failed to extract AST data")
+	}
+
+	// Cast astData to SolidityAST
+	var ast parser.SolidityAST
+	err = json.Unmarshal(astData, &ast)
+
+	if err != nil {
+		return []solidity.Struct{}, errors.New("Failed to cast AST data")
+	}
+
+	s, err := ast.ParseStructs(settings.solidityStruct)
+	if err != nil {
+		return []solidity.Struct{}, errors.Wrap(err, "Failed to parse structs")
+	}
+
+	return s, nil
 }

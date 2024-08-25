@@ -8,6 +8,7 @@ import (
 
 type GlobalConfig struct {
 	PrintingConfig PrintingConfig
+	OutDir		 string
 }
 
 type PrintingConfig struct {

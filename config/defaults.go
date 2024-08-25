@@ -3,6 +3,7 @@ package config
 func GetDefaultConfig() GlobalConfig {
 	return GlobalConfig{
 		PrintingConfig: GetDefaultPrintingConfig(),
+		OutDir: "./out/",
 	}
 }
 
