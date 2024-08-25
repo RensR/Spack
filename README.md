@@ -1,99 +1,66 @@
-# Spack
+## Foundry
 
-Spack parses Solidity structs and packs the fields efficiently to reduce the
-number of storage slots they use. It also adds struct packing comments to clearly indicate
-how the fields are packed.
+**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
 
-It can deal with comments and whitespace in the struct definition, and will 
-preserve them in the output. It handles unknown types by assuming they cannot be 
-packed, treating they as `bytes32`.
+Foundry consists of:
 
-## Disclaimer
+-   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
+-   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
+-   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
+-   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
 
-This code is a work in progress and can contain bugs. Use it at your own risk.
-Feature request and bug reports are welcome.
+## Documentation
 
-### Example
+https://book.getfoundry.sh/
 
-input
+## Usage
 
-```solidity
-    struct RequestMeta {
-        uint64 completedRequests;
-        Custom.Datatype data;
-        address requestingContract;
-        uint72 adminFee; // in wei
-        address subscriptionOwner;
-        bytes32 flags; // 32 bytes of flags
-        uint96 availableBalance; // in wei. 0 if not specified.
-        uint64 subscriptionId;
-        uint64 initiatedRequests;// number of requests initiated by this contract
-        uint32 callbackGasLimit;
-        uint16 dataVersion;
-    }
+### Build
+
+```shell
+$ forge build
 ```
 
-output
+### Test
 
-```solidity
-    struct RequestMeta {
-        Custom.Datatype data; //                     
-        bytes32 flags; //                  32 bytes of flags
-        address requestingContract; // ──╮
-        uint96 availableBalance; // ─────╯ in wei. 0 if not specified.
-        address subscriptionOwner; // ───╮
-        uint64 completedRequests; //     │
-        uint32 callbackGasLimit; // ─────╯
-        uint72 adminFee; // ─────────────╮ in wei
-        uint64 subscriptionId; //        │
-        uint64 initiatedRequests; //     │ number of requests initiated by this contract
-        uint16 dataVersion; // ──────────╯
-    }
+```shell
+$ forge test
 ```
 
-## Quickstart
+### Format
 
-build
-
-```bash
-go build
+```shell
+$ forge fmt
 ```
 
-Loading from a file (recommended):
+### Gas Snapshots
 
-```bash
-./spack -f count examples/RequestMeta.txt
-./spack -f pack examples/RequestMeta.txt
+```shell
+$ forge snapshot
 ```
 
-Counting storage slots
-    
-```bash
-./spack -f count examples/RequestMeta.txt
+### Anvil
+
+```shell
+$ anvil
 ```
 
-Printing the struct without optimizations but with struct packing comments
+### Deploy
 
-```bash
-./spack -f -u count examples/RequestMeta.txt
-./spack -f -u pack examples/RequestMeta.txt
+```shell
+$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
 ```
 
-## Commands and flags
+### Cast
 
-### Commands
+```shell
+$ cast <subcommand>
+```
 
-- `pack` - packs the struct
-- `count` - counts the number of storage slots the struct uses
+### Help
 
-### Flags
-- `-f` or `--file` - load the struct from a file
-- `-u` or `--unoptimized` - print the struct without optimizations but with struct packing comments
-- `-c` or `--config` - load the config from a file
-
-
-## TODO
-
-- [ ] Add more flexible command line options
-- [ ] Add tests
-- [ ] Improve error handling
+```shell
+$ forge --help
+$ anvil --help
+$ cast --help
+```
